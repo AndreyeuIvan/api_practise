@@ -1,0 +1,15 @@
+# Development dependencies for GameTextExtractor
+# These packages are required for OCR functionality and testing
+
+# Core OCR and image processing dependencies
+easyocr
+opencv-python
+torch
+torchvision
+
+# Testing framework
+pytest
+pytest-cov
+
+# Additional development tools
+numpy
