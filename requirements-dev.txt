@@ -1,0 +1,12 @@
+# Development dependencies for GameTextExtractor
+# OCR and image processing
+easyocr
+opencv-python
+torch
+
+# Testing
+pytest
+pytest-cov
+
+# Optional: numpy is already a dependency of opencv-python
+numpy
