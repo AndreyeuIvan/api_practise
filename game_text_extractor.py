@@ -213,8 +213,8 @@ def threshold_image(
     max_value: int = 255,
     use_otsu: bool = True,
     invert: bool = False,
-    blockSize: int = 11,
-    C: int = 2,
+    block_size: int = 11,
+    c: int = 2,
     method: int = cv2.ADAPTIVE_THRESH_GAUSSIAN_C
 ) -> np.ndarray:
     """
@@ -227,8 +227,8 @@ def threshold_image(
         max_value: Maximum value for thresholding (default: 255)
         use_otsu: Use OTSU algorithm for automatic threshold (default: True)
         invert: Invert the threshold (default: False)
-        blockSize: Block size for adaptive thresholding (default: 11)
-        C: Constant subtracted from mean for adaptive thresholding (default: 2)
+        block_size: Block size for adaptive thresholding (default: 11)
+        c: Constant subtracted from mean for adaptive thresholding (default: 2)
         method: Adaptive method - cv2.ADAPTIVE_THRESH_GAUSSIAN_C or MEAN_C
     
     Returns:
@@ -264,8 +264,8 @@ def threshold_image(
             max_value,
             method,
             thresh_type,
-            blockSize,
-            C
+            block_size,
+            c
         )
     
     else:
