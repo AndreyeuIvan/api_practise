@@ -1,12 +1,13 @@
 # Development dependencies for GameTextExtractor
 # OCR and image processing
-easyocr
-opencv-python
-torch
+easyocr>=1.7.0
+opencv-python>=4.8.0
+torch>=2.0.0
+torchvision>=0.15.0
 
 # Testing
-pytest
-pytest-cov
+pytest>=7.0.0
+pytest-cov>=4.0.0
 
 # Optional: numpy is already a dependency of opencv-python
-numpy
+numpy>=1.24.0
