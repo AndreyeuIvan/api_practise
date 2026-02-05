@@ -1,0 +1,14 @@
+# Development dependencies for api_practise
+# OCR and Image Processing
+easyocr
+opencv-python
+torch
+torchvision
+
+# Testing
+pytest
+pytest-cov
+
+# Code Quality
+flake8
+black
