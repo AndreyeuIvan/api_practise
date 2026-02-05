@@ -13,6 +13,7 @@ from game_text_extractor import (
     to_grayscale,
     denoise_image,
     threshold_image,
+    crop_roi,
 )
 
 
@@ -107,6 +108,77 @@ class TestPreprocessingHelpers:
         # Result should be binary
         unique_values = np.unique(result)
         assert len(unique_values) <= 2
+
+
+class TestCropROI:
+    """Test the crop_roi helper function."""
+    
+    def test_crop_roi_basic(self):
+        """Test basic ROI cropping."""
+        # Create a 100x100 image
+        img = np.zeros((100, 100), dtype=np.uint8)
+        img[20:40, 30:60] = 255  # White region in specific area
+        
+        # Crop the white region
+        cropped = crop_roi(img, x=30, y=20, width=30, height=20)
+        
+        assert cropped.shape == (20, 30)
+        # The cropped region should be all white
+        assert np.all(cropped == 255)
+    
+    def test_crop_roi_color_image(self):
+        """Test ROI cropping on color image."""
+        # Create a 100x100x3 color image
+        img = np.zeros((100, 100, 3), dtype=np.uint8)
+        img[10:30, 20:50, :] = [255, 0, 0]  # Blue region (BGR format)
+        
+        # Crop the blue region
+        cropped = crop_roi(img, x=20, y=10, width=30, height=20)
+        
+        assert cropped.shape == (20, 30, 3)
+        # The cropped region should be all blue (BGR format)
+        assert np.all(cropped == [255, 0, 0])
+    
+    def test_crop_roi_full_image(self):
+        """Test cropping entire image."""
+        img = np.random.randint(0, 256, (50, 80), dtype=np.uint8)
+        
+        cropped = crop_roi(img, x=0, y=0, width=80, height=50)
+        
+        assert cropped.shape == img.shape
+        assert np.array_equal(cropped, img)
+    
+    def test_crop_roi_negative_coordinates(self):
+        """Test that negative coordinates raise ValueError."""
+        img = np.zeros((100, 100), dtype=np.uint8)
+        
+        with pytest.raises(ValueError, match="ROI coordinates must be non-negative"):
+            crop_roi(img, x=-10, y=20, width=30, height=20)
+        
+        with pytest.raises(ValueError, match="ROI coordinates must be non-negative"):
+            crop_roi(img, x=10, y=-20, width=30, height=20)
+    
+    def test_crop_roi_invalid_dimensions(self):
+        """Test that invalid dimensions raise ValueError."""
+        img = np.zeros((100, 100), dtype=np.uint8)
+        
+        with pytest.raises(ValueError, match="ROI dimensions must be positive"):
+            crop_roi(img, x=10, y=20, width=0, height=20)
+        
+        with pytest.raises(ValueError, match="ROI dimensions must be positive"):
+            crop_roi(img, x=10, y=20, width=30, height=-5)
+    
+    def test_crop_roi_out_of_bounds(self):
+        """Test that out-of-bounds ROI raises ValueError."""
+        img = np.zeros((100, 100), dtype=np.uint8)
+        
+        # ROI extends beyond image width
+        with pytest.raises(ValueError, match="ROI region .* exceeds image bounds"):
+            crop_roi(img, x=80, y=20, width=30, height=20)
+        
+        # ROI extends beyond image height
+        with pytest.raises(ValueError, match="ROI region .* exceeds image bounds"):
+            crop_roi(img, x=10, y=90, width=30, height=20)
 
 
 class TestGameTextExtractor:
@@ -220,3 +292,50 @@ class TestGameTextExtractor:
         assert isinstance(texts, list)
         # Even without preprocessing, should be able to extract some text
         # (though results may vary)
+    
+    def test_extract_text_with_roi(self):
+        """Test text extraction with ROI cropping."""
+        # Create an image with text in different regions
+        img = np.ones((200, 400, 3), dtype=np.uint8) * 255
+        
+        # Add text at top (title area)
+        cv2.putText(img, "TITLE", (150, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 0), 2)
+        
+        # Add text at bottom (should be excluded by ROI)
+        cv2.putText(img, "FOOTER", (150, 180), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 0), 2)
+        
+        extractor = GameTextExtractor(use_gpu=False)
+        
+        # Extract text only from top region (ROI)
+        roi = {'x': 0, 'y': 0, 'width': 400, 'height': 100}
+        texts = extractor.extract_text(
+            img,
+            preprocess=True,
+            grayscale=True,
+            thresholding='binary',
+            roi=roi
+        )
+        
+        # Should extract text from ROI
+        assert isinstance(texts, list)
+        # Verify that the function works with ROI parameter and returns a list
+        # OCR results can vary, so we just verify the API contract
+    
+    def test_extract_text_with_roi_invalid_dict(self):
+        """Test that invalid ROI dict raises ValueError."""
+        img = np.ones((200, 400, 3), dtype=np.uint8) * 255
+        extractor = GameTextExtractor(use_gpu=False)
+        
+        # Missing required key
+        with pytest.raises(ValueError, match="ROI dict missing required key"):
+            extractor.extract_text(img, roi={'x': 0, 'y': 0, 'width': 100})
+    
+    def test_extract_text_with_roi_out_of_bounds(self):
+        """Test that out-of-bounds ROI raises ValueError."""
+        img = np.ones((200, 400, 3), dtype=np.uint8) * 255
+        extractor = GameTextExtractor(use_gpu=False)
+        
+        # ROI extends beyond image bounds
+        roi = {'x': 0, 'y': 0, 'width': 500, 'height': 100}
+        with pytest.raises(ValueError, match="ROI region .* exceeds image bounds"):
+            extractor.extract_text(img, roi=roi)

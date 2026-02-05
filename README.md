@@ -43,6 +43,33 @@ texts = extractor.extract_text(
 print(f"Extracted texts: {texts}")
 ```
 
+#### ROI (Region of Interest) Cropping
+
+To focus OCR on specific areas of the screenshot (e.g., title regions), use the `roi` parameter:
+
+```python
+from game_text_extractor import GameTextExtractor
+
+extractor = GameTextExtractor(langs=['en'], use_gpu=False)
+
+# Define ROI for title area (top 100 pixels of a 1920x1080 screenshot)
+roi = {'x': 0, 'y': 0, 'width': 1920, 'height': 100}
+
+# Extract text only from the title region
+texts = extractor.extract_text(
+    'screenshot.png',
+    preprocess=True,
+    grayscale=True,
+    denoise='fastnlmeans',
+    thresholding='binary',
+    roi=roi
+)
+
+print(f"Title text: {texts}")
+```
+
+This avoids processing irrelevant parts of the screenshot and improves OCR accuracy and performance.
+
 ### Preprocessing Options
 
 The `extract_text` method supports various preprocessing options:
@@ -51,20 +78,24 @@ The `extract_text` method supports various preprocessing options:
 - `denoise` (str|None): Denoising method - 'fastnlmeans', 'gaussian', or None
 - `thresholding` (str|None): Thresholding mode - 'binary', 'adaptive', or None
 - `threshold_params` (dict): Additional parameters for thresholding (e.g., `{'use_otsu': True}`)
+- `roi` (dict|None): Region of Interest with keys 'x', 'y', 'width', 'height' to crop before processing
 
 ### Individual Preprocessing Functions
 
 You can also use the preprocessing functions independently:
 
 ```python
-from game_text_extractor import to_grayscale, denoise_image, threshold_image
+from game_text_extractor import to_grayscale, denoise_image, threshold_image, crop_roi
 import cv2
 
 # Load image
 img = cv2.imread('screenshot.png')
 
+# Apply ROI cropping to focus on title area
+cropped = crop_roi(img, x=0, y=0, width=1920, height=100)
+
 # Apply preprocessing steps individually
-gray = to_grayscale(img)
+gray = to_grayscale(cropped)
 denoised = denoise_image(gray, method='fastnlmeans')
 thresholded = threshold_image(denoised, mode='binary', use_otsu=True)
 ```

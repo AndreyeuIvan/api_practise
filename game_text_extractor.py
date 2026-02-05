@@ -160,6 +160,55 @@ def threshold_image(
         raise ValueError(f"Unknown threshold mode: {mode}. Use 'binary', 'adaptive', or None.")
 
 
+def crop_roi(
+    img: np.ndarray,
+    x: int,
+    y: int,
+    width: int,
+    height: int
+) -> np.ndarray:
+    """
+    Crop a Region of Interest (ROI) from an image.
+    
+    This function extracts a rectangular region from the image based on the
+    provided coordinates. Useful for focusing OCR on specific areas like
+    title regions in game screenshots.
+    
+    Args:
+        img: Input image (grayscale or color).
+        x: X-coordinate of the top-left corner of the ROI.
+        y: Y-coordinate of the top-left corner of the ROI.
+        width: Width of the ROI.
+        height: Height of the ROI.
+        
+    Returns:
+        Cropped image region.
+        
+    Raises:
+        ValueError: If ROI coordinates are invalid or out of bounds.
+    """
+    img_height, img_width = img.shape[:2]
+    
+    # Validate coordinates
+    if x < 0 or y < 0:
+        raise ValueError(f"ROI coordinates must be non-negative. Got x={x}, y={y}")
+    
+    if width <= 0 or height <= 0:
+        raise ValueError(f"ROI dimensions must be positive. Got width={width}, height={height}")
+    
+    if x + width > img_width or y + height > img_height:
+        raise ValueError(
+            f"ROI region (x={x}, y={y}, width={width}, height={height}) "
+            f"exceeds image bounds ({img_width}x{img_height})"
+        )
+    
+    # Crop the image using numpy array slicing
+    # Note: OpenCV images are stored as [height, width, channels]
+    cropped = img[y:y+height, x:x+width]
+    
+    return cropped
+
+
 class GameTextExtractor:
     """
     Singleton class for extracting text from game screenshots using EasyOCR.
@@ -223,10 +272,11 @@ class GameTextExtractor:
         grayscale: bool = True,
         denoise: Optional[str] = 'fastnlmeans',
         thresholding: Optional[str] = 'binary',
-        threshold_params: Optional[dict] = None
+        threshold_params: Optional[dict] = None,
+        roi: Optional[dict] = None
     ) -> List[str]:
         """
-        Extract text from an image with optional preprocessing.
+        Extract text from an image with optional preprocessing and ROI cropping.
         
         Args:
             image: File path (str) or image array (np.ndarray).
@@ -235,12 +285,15 @@ class GameTextExtractor:
             denoise: Denoising method ('fastnlmeans', 'gaussian', or None).
             thresholding: Thresholding mode ('binary', 'adaptive', or None).
             threshold_params: Additional parameters for threshold_image().
+            roi: Optional Region of Interest dict with keys 'x', 'y', 'width', 'height'.
+                 Useful for focusing OCR on specific areas (e.g., title regions).
             
         Returns:
             List of recognized text strings.
             
         Raises:
             FileNotFoundError: If the image path cannot be read.
+            ValueError: If ROI parameters are invalid.
         """
         # Load image if path is provided
         if isinstance(image, str):
@@ -249,6 +302,18 @@ class GameTextExtractor:
                 raise FileNotFoundError(f"Cannot read image file: {image}")
         else:
             img = image.copy()
+        
+        # Apply ROI cropping if specified
+        if roi is not None:
+            try:
+                x = roi['x']
+                y = roi['y']
+                width = roi['width']
+                height = roi['height']
+            except KeyError as e:
+                raise ValueError(f"ROI dict missing required key: {e}")
+            
+            img = crop_roi(img, x, y, width, height)
         
         # Apply preprocessing if requested
         if preprocess:
