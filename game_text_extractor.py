@@ -230,7 +230,7 @@ def threshold_image(
         return thresholded
     
     elif mode == 'adaptive':
-        thresh_type = cv2.ADAPTIVE_THRESH_MEAN_C if method == cv2.ADAPTIVE_THRESH_MEAN_C else cv2.ADAPTIVE_THRESH_GAUSSIAN_C
+        thresh_type = method
         binary_type = cv2.THRESH_BINARY_INV if invert else cv2.THRESH_BINARY
         
         thresholded = cv2.adaptiveThreshold(

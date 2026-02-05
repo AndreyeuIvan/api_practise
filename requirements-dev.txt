@@ -4,7 +4,7 @@
 # Core OCR and image processing dependencies
 easyocr
 opencv-python
-torch
+torch>=2.6.0
 torchvision
 
 # Testing framework
